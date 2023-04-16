@@ -1,14 +1,15 @@
+
 {
   description = "A very basic flake";
 
-  outputs = { self, nixpkgs }: 
-    let 
+  outputs = { self, nixpkgs }:
+    let
       supportedSystems = [ "aarch64-darwin" ];
       forEachSystem = nixpkgs.lib.genAttrs supportedSystems;
     in {
-      devShells = forEachSystem (system: 
-        let 
-          pkgs = nixpkgs.legacyPackages."${system}"; 
+      devShells = forEachSystem (system:
+        let
+          pkgs = nixpkgs.legacyPackages."${system}";
           ruby = pkgs.ruby_3_2.override { inherit bundler bundix; };
           bundler = pkgs.bundler.override { inherit ruby; };
           bundix = pkgs.bundix.override { inherit bundler; };
@@ -31,10 +32,10 @@
 
             bundix = pkgs.mkShell {
               name = "bundix";
-              packages = [ 
+              packages = [
                 ruby
                 bundler
-                bundix 
+                bundix
               ];
             };
           }

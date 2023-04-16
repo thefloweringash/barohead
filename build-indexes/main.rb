@@ -147,7 +147,7 @@ class ItemDB
           parse_recipe(deconstruct_node, items_are_requirements: false) =>
            { required_skills:, required_items:, items:, }
           item.deconstruct << Deconstruct.new(
-            time:, 
+            time:,
             required_skills:,
             required_items:,
             items:,
@@ -159,8 +159,8 @@ class ItemDB
           suitable_fabricators = parse_comma_array(fabricate_node, 'suitablefabricators')
           requires_recipe = parse_boolean(fabricate_node, 'requiresrecipe', false)
           amount = parse_integer(fabricate_node, 'amount', DEFAULT_FAB_AMOUNT)
-          out_condition = parse_float(fabricate_node, 'outcondition', 1.0) 
-          recycle = if (fabricate_node.has_attribute?('displayname')) 
+          out_condition = parse_float(fabricate_node, 'outcondition', 1.0)
+          recycle = if (fabricate_node.has_attribute?('displayname'))
             display_name = fabricate_node['displayname']
             case display_name
             when 'recycleitem'
@@ -176,7 +176,7 @@ class ItemDB
             false
           end
 
-          parse_recipe(fabricate_node, items_are_requirements: true) => 
+          parse_recipe(fabricate_node, items_are_requirements: true) =>
             { required_skills:, required_items: }
           item.fabricate << Fabricate.new(
             time:,
@@ -243,7 +243,7 @@ class ItemDB
       default
     end
 
-  end 
+  end
 
   def parse_item_ref(item_node, allow_tag:)
     ref = nil
@@ -290,7 +290,7 @@ class ItemDB
         ref = parse_item_ref(child_node, allow_tag: items_are_requirements)
         amount = parse_integer(child_node, 'amount', 1)
 
-        if items_are_requirements then 
+        if items_are_requirements then
           required_items << RequiredItem.new(item: ref, amount:, condition: nil)
         else
           item_amounts[ref.id] = (item_amounts[ref.id] || 0) + amount
