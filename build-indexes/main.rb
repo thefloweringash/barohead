@@ -83,7 +83,7 @@ ItemRef =  Data.define(:type, :value) do
   def tag? = type === :tag
 end
 
-Item = Struct.new('Item', :id, :fabricate, :deconstruct) do
+Item = Struct.new('Item', :id, :nameidentifier, :fabricate, :deconstruct) do
   def initialize(...)
     super
     self.fabricate ||= []
@@ -93,6 +93,7 @@ Item = Struct.new('Item', :id, :fabricate, :deconstruct) do
   def as_json(*)
     {
       'id' => id ,
+      'nameidentifier' => nameidentifier,
       'fabricate' => fabricate,
       'deconstruct' => deconstruct,
     }
@@ -141,7 +142,9 @@ class ItemDB
         item_id = require_string(item_node, 'identifier')
         warn "Adding item id: #{item_id}"
 
-        item = Item.new(id: item_id)
+        nameidentifier = item_node['nameidentifier']
+
+        item = Item.new(id: item_id, nameidentifier:)
         items[item_id] = item
 
         item_node.xpath('Deconstruct').each do |deconstruct_node|
@@ -210,7 +213,7 @@ class ItemDB
         end
 
         if self.texts[language]
-          self.texts[language].merge(texts)
+          self.texts[language].merge!(texts)
         else
           self.texts[language] = texts
         end

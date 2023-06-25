@@ -26,11 +26,9 @@ fn item_list(ItemListProps { items }: &ItemListProps) -> Html {
         .map(|item| {
             let id = item.id.as_str();
 
-            let name_translation_key = format!("entityname.{}", id);
-
             let name = ambient_data
                 .texts
-                .get(name_translation_key.as_str())
+                .get(item.name_text_key().as_str())
                 .map(|t| t.as_str())
                 .unwrap_or(id);
 

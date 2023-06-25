@@ -15,8 +15,16 @@ pub enum Language {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Item {
     pub id: String,
+    pub nameidentifier: Option<String>,
     pub fabricate: Vec<Fabricate>,
     pub deconstruct: Vec<Deconstruct>,
+}
+
+impl Item {
+    pub fn name_text_key(&self) -> String {
+        let id = self.nameidentifier.as_ref().unwrap_or(&self.id);
+        format!("entityname.{}", id)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
