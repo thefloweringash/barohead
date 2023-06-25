@@ -22,7 +22,7 @@ ProducedItem = Data.define(:id, :amount) do
   include CanJson
 
   def as_json(*)
-    { id => amount }
+    { 'id' => id, 'amount' => amount }
   end
 end
 
@@ -119,12 +119,14 @@ class ItemDB
   DEFAULT_FAB_AMOUNT = 1 # TODO: what does the game do?
 
   attr_reader :items
+  attr_reader :texts
 
   def initialize
     @items = {}
+    @texts = {}
   end
 
-  def parse(file)
+  def parse_items(file)
     File.open(file) do |f|
       doc = Nokogiri::XML(f)
 
@@ -188,6 +190,29 @@ class ItemDB
             out_condition:,
             recycle:,
           )
+        end
+      end
+    end
+  end
+
+  def parse_texts(file)
+    File.open(file) do |f|
+      doc = Nokogiri::XML(f)
+
+      doc.xpath('/infotexts').each do |texts_node|
+        language = require_string(texts_node, 'language')
+        texts = {} # it's just kv
+        texts_node.children.each do |child_node|
+          next unless child_node.element?
+          next unless child_node.name.start_with?("entityname")
+
+          texts[child_node.name] = child_node.children.to_s
+        end
+
+        if self.texts[language]
+          self.texts[language].merge(texts)
+        else
+          self.texts[language] = texts
         end
       end
     end
@@ -297,6 +322,8 @@ class ItemDB
         end
       when 'RequiredItem'
         ref = parse_item_ref(child_node, allow_tag: false)
+        next if ref.nil? # see slipsuit recipe, maybe "variantof" handling
+
         amount = parse_integer(child_node, 'amount', 1)
         condition = parse_condition_range(child_node)
 
@@ -320,8 +347,17 @@ end
 
 db = ItemDB.new
 Dir['../Content/Items/**/*.xml'].each do |path|
-  warn "Parsing #{path}"
-  db.parse(path)
+  warn "Parsing Items in #{path}"
+  db.parse_items(path)
 end
 
-puts db.items.values.select(&:interesting?).to_json
+# TODO: localisation
+Dir['../Content/Texts/English/*.xml'].each do |path|
+  warn "Parsing Texts in #{path}"
+  db.parse_texts(path)
+end
+
+puts ({
+  items: db.items.values.select(&:interesting?),
+  texts: db.texts,
+}).to_json

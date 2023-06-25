@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+  "barohead",
+  "barohead_data",
+  "pack-index",
+]

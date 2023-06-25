@@ -2,14 +2,23 @@
 {
   description = "A very basic flake";
 
-  outputs = { self, nixpkgs }:
+  inputs = {
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    flake-utils.url = "github:numtide/flake-utils";
+  };
+
+  outputs = { self, nixpkgs, rust-overlay, ... }:
     let
       supportedSystems = [ "aarch64-darwin" ];
       forEachSystem = nixpkgs.lib.genAttrs supportedSystems;
     in {
       devShells = forEachSystem (system:
         let
-          pkgs = nixpkgs.legacyPackages."${system}";
+          pkgs = nixpkgs.legacyPackages."${system}".extend (import rust-overlay);
           ruby = pkgs.ruby_3_2.override { inherit bundler bundix; };
           bundler = pkgs.bundler.override { inherit ruby; };
           bundix = pkgs.bundix.override { inherit bundler; };
@@ -27,6 +36,17 @@
               packages = with pkgs; [
                 esbuild
                 bundlerEnv.wrappedRuby
+                cargo
+                (rust-bin.stable.latest.default.override {
+                  targets = [
+                    "wasm32-unknown-unknown"
+                  ];
+                })
+                rustfmt
+                rust-analyzer
+                rustPackages.clippy
+                rustfilt
+                trunk
               ];
             };
 
