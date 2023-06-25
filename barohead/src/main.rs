@@ -8,13 +8,13 @@ use barohead_data::items::*;
 
 #[derive(Debug, PartialEq)]
 struct AmbientData {
-    items: Rc<Vec<Item>>,
+    items: Rc<BTreeMap<String, Rc<Item>>>,
     texts: Rc<BTreeMap<String, String>>,
 }
 
 #[derive(Properties, PartialEq)]
 struct ItemListProps {
-    items: Rc<Vec<Item>>,
+    items: Vec<Rc<Item>>,
 }
 
 #[function_component(ItemList)]
@@ -50,7 +50,7 @@ fn item_list(ItemListProps { items }: &ItemListProps) -> Html {
 fn item_lookup() -> Html {
     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
     html! {
-        <ItemList items={ambient_data.items.clone()} />
+        <ItemList items={ambient_data.items.values().cloned().collect::<Vec<Rc<Item>>>()} />
     }
 }
 
@@ -62,10 +62,16 @@ fn app() -> Html {
             let items_bincode = std::include_bytes!("../recipes.bincode");
             let mut itemdb: ItemDB = bincode::deserialize(items_bincode).unwrap();
 
+            let rc_items: BTreeMap<String, Rc<Item>> = itemdb
+                .items
+                .into_iter()
+                .map(|item| (item.id.to_owned(), Rc::new(item)))
+                .collect();
+
             let english_texts = itemdb.texts.remove(&Language::English).unwrap();
 
             AmbientData {
-                items: Rc::new(itemdb.items),
+                items: Rc::new(rc_items),
                 texts: Rc::new(english_texts),
             }
         },
