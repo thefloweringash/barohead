@@ -18,11 +18,11 @@ RequiredItem = Data.define(:item, :amount, :condition) do
   end
 end
 
-ProducedItem = Data.define(:id, :amount) do
+ProducedItem = Data.define(:id, :amount, :mincondition) do
   include CanJson
 
   def as_json(*)
-    { 'id' => id, 'amount' => amount }
+    { 'id' => id, 'amount' => amount, 'mincondition' => mincondition }
   end
 end
 
@@ -305,7 +305,7 @@ class ItemDB
   def parse_recipe(node, items_are_requirements:)
     required_skills = {}
     required_items = []
-    item_amounts = {}
+    items = []
 
     node.children.each do |child_node|
       next unless child_node.element?
@@ -318,7 +318,8 @@ class ItemDB
         if items_are_requirements then
           required_items << RequiredItem.new(item: ref, amount:, condition: nil)
         else
-          item_amounts[ref.id] = (item_amounts[ref.id] || 0) + amount
+          mincondition = parse_float(child_node, 'mincondition', nil)
+          items << ProducedItem.new(id: ref.id, amount:, mincondition:)
         end
       when 'RequiredItem'
         ref = parse_item_ref(child_node, allow_tag: false)
@@ -338,8 +339,6 @@ class ItemDB
         raise "Unxpected child: #{child_node.name} #{child_node.inspect}"
       end
     end
-
-    items = item_amounts.map { |id, amount| ProducedItem.new(id:, amount:) }
 
     { required_items:, required_skills:, items: }
   end

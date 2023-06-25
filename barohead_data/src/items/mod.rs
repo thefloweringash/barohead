@@ -50,6 +50,7 @@ pub struct RequiredItem {
 pub struct ProducedItem {
     pub id: String,
     pub amount: i32,
+    pub mincondition: Option<f32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
