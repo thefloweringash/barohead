@@ -109,6 +109,7 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                         ItemRef::Tag(tag) => {
                             html! {
                                 <div>
+                                    {"(Tag) "}
                                     if required_item.amount != 1 {
                                       <span class="amount">{required_item.amount}</span>
                                     }
