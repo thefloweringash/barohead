@@ -2,7 +2,7 @@
   color: blue;
 }
 
-.fabricate {
+.fabricate, .deconstruct {
   display: flex;
   flex-direction: horizontal;
   align-items: center;
@@ -10,14 +10,18 @@
 
   .required_items {
     display: grid;
-    grid-template-columns: repeat(5, 135px);
+    grid-template-columns: repeat(3, 135px);
     grid-gap: 12px;
   }
 
-  .result {
-    &::before {
-      content: 'Result';
-    }
+  .produced_items {
+    display: grid;
+    grid-template-columns: repeat(2, 135px);
+    grid-gap: 12px;
+  }
+
+  .production-arrow {
+    padding: 0 15px;
   }
 }
 

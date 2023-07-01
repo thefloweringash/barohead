@@ -97,7 +97,7 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                 .map(|required_item| {
                     match &required_item.item {
                         ItemRef::Id(id) => {
-                            let item = ambient_data.get_item(id).expect("Required item");
+                            let item = ambient_data.get_item(id).expect("Fabricate Required item");
                             html! {
                                 <ItemThumbnail
                                     {item}
@@ -126,9 +126,64 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
             html! {
                 <div class="fabricate">
                     <div class="required_items">{required_items}</div>
-                    <div class="result">
+                    <div class="production-arrow">{"->"}</div>
+                    <div class="produced_items">
                         <ItemThumbnail {item} amount={fabricate.amount} condition={fabricate.out_condition} />
                     </div>
+                </div>
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let deconstruct = item
+        .deconstruct
+        .iter()
+        .map(|deconstruct| {
+            let required_items = deconstruct
+                .required_items
+                .iter()
+                .map(|required_item| match &required_item.item {
+                    ItemRef::Id(id) => {
+                        let item = ambient_data
+                            .get_item(id.as_str())
+                            .expect("Deconstruct Required item");
+                        html! {
+                            <ItemThumbnail
+                                {item}
+                                amount={required_item.amount}
+                                condition_range={required_item.condition.clone()}
+                            />
+                        }
+                    }
+                    _ => {
+                        panic!("Does this really happen?");
+                    }
+                })
+                .collect::<Vec<_>>();
+            let produced_items = deconstruct
+                .items
+                .iter()
+                .map(|produced_item| {
+                    let item = ambient_data
+                        .get_item(produced_item.id.as_str())
+                        .expect("Deconstruct Produced item");
+                    // TODO: The produced items are conditional based on input condition.
+                    html! {
+                        <ItemThumbnail
+                            {item}
+                            amount={produced_item.amount}
+                        />
+                    }
+                })
+                .collect::<Vec<_>>();
+            html! {
+                <div class="deconstruct">
+                    <div class="required_items">
+                        <ItemThumbnail {item} />
+                        {required_items}
+                    </div>
+                    <div class="production-arrow">{"->"}</div>
+                    <div class="produced_items">{produced_items}</div>
                 </div>
             }
         })
@@ -143,8 +198,8 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
             </dl>
             <h3>{format!("Produced By ({})", fabricate.len())}</h3>
             {fabricate}
-            <h3>{"Deconstructs into"}</h3>
-            <div>{"TODO"}</div>
+            <h3>{format!("Deconstructs Into ({})", deconstruct.len())}</h3>
+            {deconstruct}
             <h3>{"Used by"}</h3>
             <div>{"TODO"}</div>
             <h3>{"Debug"}</h3>
