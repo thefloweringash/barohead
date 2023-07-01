@@ -196,11 +196,13 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                 <dt>{"Id"}</dt>
                 <dd>{id}</dd>
             </dl>
-            <h3>{format!("Produced By ({})", fabricate.len())}</h3>
+            <h3>{format!("Fabricated By ({})", fabricate.len())}</h3>
             {fabricate}
             <h3>{format!("Deconstructs Into ({})", deconstruct.len())}</h3>
             {deconstruct}
             <h3>{"Used by"}</h3>
+            <div>{"TODO"}</div>
+            <h3>{"Produced by"}</h3>
             <div>{"TODO"}</div>
             <h3>{"Debug"}</h3>
             <details>
