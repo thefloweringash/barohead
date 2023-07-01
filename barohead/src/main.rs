@@ -2,55 +2,121 @@ use std::collections::BTreeMap;
 use std::panic;
 use std::rc::Rc;
 
+use fuzzy_matcher::skim::SkimMatcherV2;
+use fuzzy_matcher::FuzzyMatcher;
 use yew::prelude::*;
 
 use barohead_data::items::*;
 
+mod widgets;
+
+use crate::widgets::TextInput;
+
+type ItemID = String;
+
+// Statically compute a bunch of indexes and so on that we will use a bunch.
 #[derive(Debug, PartialEq)]
 struct AmbientData {
-    items: Rc<BTreeMap<String, Rc<Item>>>,
-    texts: Rc<BTreeMap<String, String>>,
+    items: BTreeMap<ItemID, Rc<Item>>,
+    translations: ItemTranslations,
+    items_by_description: BTreeMap<String, Rc<Item>>,
+}
+
+#[derive(Debug, PartialEq)]
+struct ItemTranslations {
+    texts: BTreeMap<String, String>,
+}
+
+impl ItemTranslations {
+    pub fn get_name(&self, item: &Item) -> &str {
+        let name_string = item.name_text_key();
+        self.texts
+            .get(name_string.as_str())
+            .expect("Item translation")
+    }
+}
+
+#[function_component[ItemSearch]]
+fn item_search() -> Html {
+    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
+    let search_input = use_state(|| "".to_owned());
+
+    let on_change = {
+        let search_input = search_input.clone();
+        Callback::from(move |e: String| {
+            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(e.as_str()));
+            search_input.set(e)
+        })
+    };
+
+    let matcher = SkimMatcherV2::default();
+    let matching_items: Vec<_> = ambient_data
+        .items_by_description
+        .iter()
+        .filter_map(|(desc, item)| {
+            let guess = (*search_input).as_str();
+            let r#match = matcher.fuzzy_indices(desc, guess);
+            r#match.map(|x| (desc, x, item))
+        })
+        .collect();
+
+    html! {
+        <>
+            <TextInput value={(*search_input).clone()} {on_change}></TextInput>
+            <pre>
+                {format!("{:#?}", matching_items)}
+            </pre>
+        </>
+
+    }
+}
+
+#[derive(Properties, PartialEq)]
+struct ItemProps {
+    item: Rc<Item>,
+}
+
+#[function_component(ItemView)]
+fn item_view(ItemProps { item }: &ItemProps) -> Html {
+    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
+
+    let id = item.id.as_str();
+
+    let name = ambient_data.translations.get_name(item);
+
+    html! {
+        <p key={id}>
+            {name}
+            <pre>
+                {format!("{:#?}", item)}
+            </pre>
+        </p>
+    }
 }
 
 #[derive(Properties, PartialEq)]
 struct ItemListProps {
     items: Vec<Rc<Item>>,
 }
-
 #[function_component(ItemList)]
 fn item_list(ItemListProps { items }: &ItemListProps) -> Html {
-    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
-
     items
         .iter()
         .map(|item| {
-            let id = item.id.as_str();
-
-            let name = ambient_data
-                .texts
-                .get(item.name_text_key().as_str())
-                .map(|t| t.as_str())
-                .unwrap_or(id);
-
             html! {
-                <p key={id}>
-                    {name}
-                    <pre>
-                        {format!("{:#?}", item)}
-                    </pre>
-                </p>
+                <ItemView key={item.id.as_str()} item={item.clone()} />
             }
         })
         .collect()
 }
 
-#[function_component(ItemLookup)]
-fn item_lookup() -> Html {
-    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
-    html! {
-        <ItemList items={ambient_data.items.values().cloned().collect::<Vec<Rc<Item>>>()} />
-    }
-}
+// #[function_component(ItemLookup)]
+// fn item_lookup() -> Html {
+//     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
+//     html! {
+//         <ItemList items={ambient_data.items.values().cloned().collect::<Vec<Rc<Item>>>()} />
+//     }
+// }
 
 #[function_component(App)]
 fn app() -> Html {
@@ -68,9 +134,19 @@ fn app() -> Html {
 
             let english_texts = itemdb.texts.remove(&Language::English).unwrap();
 
+            let translations = ItemTranslations {
+                texts: english_texts,
+            };
+
+            let items_by_description = rc_items
+                .values()
+                .map(|item| (format!("{}", translations.get_name(item)), item.clone()))
+                .collect();
+
             AmbientData {
-                items: Rc::new(rc_items),
-                texts: Rc::new(english_texts),
+                items: rc_items,
+                translations,
+                items_by_description,
             }
         },
         (),
@@ -78,8 +154,9 @@ fn app() -> Html {
     html! {
         <>
             <ContextProvider<Rc<AmbientData>> context={ambient_data}>
-                <h1>{ "Hello World" }</h1>
-                <ItemLookup />
+                <h1>{ "Barotruma Item Database" }</h1>
+                <ItemSearch />
+                // <ItemLookup />
             </ContextProvider<Rc<AmbientData>>>
         </>
     }
