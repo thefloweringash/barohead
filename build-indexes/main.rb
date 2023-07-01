@@ -100,7 +100,8 @@ Item = Struct.new('Item', :id, :nameidentifier, :fabricate, :deconstruct) do
   end
 
   def interesting?
-    !fabricate.empty? || !deconstruct.empty?
+    # !fabricate.empty? || !deconstruct.empty?
+    true # everything is interesting!
   end
 end
 

@@ -52,11 +52,13 @@ struct ItemTranslations {
 }
 
 impl ItemTranslations {
-    pub fn get_name(&self, item: &Item) -> &str {
+    pub fn get_name<'a>(&'a self, item: &'a Item) -> &'a str {
         let name_string = item.name_text_key();
+
         self.texts
             .get(name_string.as_str())
-            .expect("Item translation")
+            .map(|x| x.as_str())
+            .unwrap_or(item.id.as_str())
     }
 }
 
