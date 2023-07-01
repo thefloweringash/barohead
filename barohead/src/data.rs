@@ -72,6 +72,10 @@ impl AmbientData {
 
         matching_items
     }
+
+    pub fn get_item(&self, item_id: &str) -> Option<Rc<Item>> {
+        self.items.get(item_id).map(|item| item.clone())
+    }
 }
 
 #[derive(Debug, PartialEq)]
