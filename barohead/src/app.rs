@@ -9,7 +9,6 @@ use yew_router::prelude::*;
 use barohead_data::items::*;
 
 use crate::data::{AmbientData, DeconstructRef, FabricateRef, ProcessRef, SearchResult};
-use crate::widgets::TextInput;
 
 #[derive(Properties, PartialEq)]
 struct ShowSearchResultProps {
@@ -68,7 +67,7 @@ pub fn new_item_search() -> Html {
     let navigator = use_navigator().unwrap();
 
     let navigate_to_item = Callback::from(move |items: Vec<SearchResult>| {
-        let id = &(*items.first().unwrap().item).id;
+        let id = &items.first().unwrap().item.id;
         navigator.push(&Route::Item { id: id.clone() })
     });
 
@@ -278,7 +277,7 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
         .deconstruct
         .iter()
         .enumerate()
-        .map(|(idx, deconstruct)| {
+        .map(|(idx, _deconstruct)| {
             let deconstruct_ref = DeconstructRef {
                 item_id: id.to_owned(),
                 idx,

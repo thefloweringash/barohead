@@ -159,25 +159,25 @@ impl AmbientData {
     }
 
     pub fn get_item(&self, item_id: &str) -> Option<Rc<Item>> {
-        self.items.get(item_id).map(|item| item.clone())
+        self.items.get(item_id).cloned()
     }
 
     pub fn get_used_by(&self, item_id: &str) -> Option<Rc<Vec<ProcessRef>>> {
-        self.items_used_by.get(item_id).map(|item| item.clone())
+        self.items_used_by.get(item_id).cloned()
     }
 
     pub fn get_produced_by(&self, item_id: &str) -> Option<Rc<Vec<ProcessRef>>> {
-        self.items_produced_by.get(item_id).map(|item| item.clone())
+        self.items_produced_by.get(item_id).cloned()
     }
 
     pub fn get_fabricate<'a>(&'a self, fabricate_ref: &FabricateRef) -> &'a Fabricate {
         let item = self.items.get(fabricate_ref.item_id.as_str()).unwrap();
-        &item.fabricate.get(fabricate_ref.idx).unwrap()
+        item.fabricate.get(fabricate_ref.idx).unwrap()
     }
 
     pub fn get_deconstruct<'a>(&'a self, deconstruct_ref: &DeconstructRef) -> &'a Deconstruct {
         let item = self.items.get(deconstruct_ref.item_id.as_str()).unwrap();
-        &item.deconstruct.get(deconstruct_ref.idx).unwrap()
+        item.deconstruct.get(deconstruct_ref.idx).unwrap()
     }
 }
 
