@@ -17,7 +17,7 @@ pub fn item_view(Props { item_ref }: &Props) -> Html {
     let db = use_context::<Rc<DB>>().unwrap();
 
     let item = db.get_item(*item_ref);
-    let name = db.translations.get_name(item);
+    let name = db.translations.get_name(item_ref);
 
     let fabricates = item
         .fabricate

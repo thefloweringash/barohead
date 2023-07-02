@@ -27,7 +27,7 @@ fn show_search_result(Props { search_result }: &Props) -> Html {
 
     // TODO: this is _really_ slow, you can feel the difference. It should use chunks.
     let item = db.get_item(search_result.item_ref);
-    let description = db.translations.get_name(item);
+    let description = db.translations.get_name(search_result.item_ref);
     let visible_match = description
         .char_indices()
         .map(|(idx, ch)| match peekable.peek() {

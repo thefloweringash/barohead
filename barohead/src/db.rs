@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
@@ -129,29 +130,39 @@ impl DB {
     pub fn from(mut itemdb: data::ItemDB) -> Self {
         let mut item_ids = StringInterner::default();
 
-        let rc_items: BTreeMap<ItemID, Rc<data::Item>> = itemdb
+        let items: BTreeMap<ItemID, Rc<data::Item>> = itemdb
             .items
             .into_iter()
             .map(|item| (item_ids.get_or_intern(&item.id), Rc::new(item)))
             .collect();
 
-        let english_texts = itemdb
+        let english_texts: BTreeMap<String, Rc<String>> = itemdb
             .texts
             .remove(&data::Language::English)
             .unwrap()
             .into_iter()
-            .map(|(key, translation)| (key, Rc::from(translation)))
+            .map(|(key, translation)| (key, Rc::from(translation.clone())))
             .collect();
 
-        let translations = ItemTranslations {
-            texts: english_texts,
-        };
+        let item_translations = items
+            .iter()
+            .map(|(item_id, item)| {
+                let name_key = item.name_text_key();
+                let name = english_texts
+                    .get(&name_key)
+                    .map(|x| x.clone())
+                    .unwrap_or_else(|| Rc::new(item.id.clone()));
+                (*item_id, name)
+            })
+            .collect::<BTreeMap<_, _>>();
 
-        let (items_used_by, items_produced_by) = build_indexes(&item_ids, &rc_items);
+        let translations = ItemTranslations { item_translations };
+
+        let (items_used_by, items_produced_by) = build_indexes(&item_ids, &items);
 
         Self {
             item_ids,
-            items: rc_items,
+            items,
             translations,
             items_used_by,
             items_produced_by,
@@ -162,11 +173,9 @@ impl DB {
         let matcher = SkimMatcherV2::default();
         let mut matching_items: Vec<_> = self
             .items
-            .iter()
-            .filter_map(|(item_id, item)| {
-                let description = &self.translations.get_name_rc(item);
-
-                let description = description.as_ref().map(|x| x.as_str()).unwrap_or(&item.id);
+            .keys()
+            .filter_map(|item_id| {
+                let description = &self.translations.get_name_rc(ItemRef { item_id: *item_id });
                 matcher
                     .fuzzy_indices(description, query)
                     .map(|(score, indices)| SearchResult {
@@ -215,22 +224,20 @@ impl DB {
 
 #[derive(Debug, PartialEq)]
 pub struct ItemTranslations {
-    texts: BTreeMap<String, Rc<String>>,
+    item_translations: BTreeMap<ItemID, Rc<String>>,
 }
 
 impl ItemTranslations {
-    pub fn get_name<'a>(&'a self, item: &'a data::Item) -> &'a str {
-        let name_string = item.name_text_key();
-
-        self.texts
-            .get(name_string.as_str())
-            .map(|x| x.as_str())
-            .unwrap_or(item.id.as_str())
+    pub fn get_name<'a>(&'a self, item_ref: impl Borrow<ItemRef>) -> &'a str {
+        self.item_translations
+            .get(&item_ref.borrow().item_id)
+            .unwrap()
     }
 
-    pub fn get_name_rc(&self, item: &data::Item) -> Option<Rc<String>> {
-        let name_string = item.name_text_key();
-
-        self.texts.get(name_string.as_str()).cloned()
+    pub fn get_name_rc(&self, item_ref: impl Borrow<ItemRef>) -> Rc<String> {
+        self.item_translations
+            .get(&item_ref.borrow().item_id)
+            .unwrap()
+            .clone()
     }
 }

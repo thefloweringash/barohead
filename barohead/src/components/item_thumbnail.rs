@@ -41,7 +41,7 @@ pub fn item_thumbnail(
               <span class="amount">{amount.unwrap()} {"x"}</span>
             }
             { " " }
-            <span class="name">{db.translations.get_name(item)}</span>
+            <span class="name">{db.translations.get_name(item_ref)}</span>
             if condition_range.is_some() {
                 <span class="condition-range">{format!("{:#?}", condition_range)}</span>
             }
