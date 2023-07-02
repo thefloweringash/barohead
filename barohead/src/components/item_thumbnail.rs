@@ -3,14 +3,14 @@ use std::rc::Rc;
 use yew::prelude::*;
 use yew_router::prelude::*;
 
-use barohead_data::items::{ConditionRange, Item};
+use barohead_data::items::ConditionRange;
 
-use crate::data::AmbientData;
+use crate::data::{AmbientData, ItemRef};
 use crate::routes::Route;
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub item: Rc<Item>,
+    pub item_ref: ItemRef,
     #[prop_or_default]
     pub amount: Option<i32>,
     #[prop_or_default]
@@ -24,7 +24,7 @@ pub struct Props {
 #[function_component(ItemThumbnail)]
 pub fn item_thumbnail(
     Props {
-        item,
+        item_ref,
         amount,
         condition,
         condition_range,
@@ -33,9 +33,7 @@ pub fn item_thumbnail(
 ) -> Html {
     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
 
-    // let id = item.id.as_str();
-
-    // let name = ambient_data.translations.get_name(item);
+    let item = ambient_data.get_item(*item_ref);
 
     let body = html! {
         <>

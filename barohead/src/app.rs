@@ -13,17 +13,17 @@ use crate::{
 
 #[derive(Properties, PartialEq)]
 struct ItemPageProps {
-    id: String,
+    id: AttrValue,
 }
 
 #[function_component(ItemPage)]
 fn item_page(ItemPageProps { id }: &ItemPageProps) -> Html {
     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
-    let item = ambient_data.get_item(id).unwrap();
+    let item_ref = ambient_data.new_item_ref(id).expect("Loading item data");
     html! {
         <>
             <Nav />
-            <ItemView {item} />
+            <ItemView item_ref={item_ref} />
         </>
     }
 }
@@ -31,9 +31,11 @@ fn item_page(ItemPageProps { id }: &ItemPageProps) -> Html {
 fn switch(route: Route) -> Html {
     match route {
         Route::Home => html! { <Home /> },
-        Route::Item { id } => html! {
-           <ItemPage {id} />
-        },
+        Route::Item { id } => {
+            html! {
+               <ItemPage id={id} />
+            }
+        }
     }
 }
 

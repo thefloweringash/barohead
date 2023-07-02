@@ -6,39 +6,37 @@ use barohead_data::items::ItemRef;
 
 use crate::{
     components::ItemThumbnail,
+    data,
     data::{AmbientData, DeconstructRef},
 };
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub self_id: String,
+    pub self_ref: data::ItemRef,
     pub deconstruct_ref: DeconstructRef,
 }
 
 #[function_component(ShowDeconstruct)]
 pub fn show_deconstruct(
     Props {
-        self_id,
+        self_ref,
         deconstruct_ref,
     }: &Props,
 ) -> Html {
     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
     let deconstruct = ambient_data.get_deconstruct(deconstruct_ref);
-    let item = ambient_data
-        .get_item(deconstruct_ref.item_id.as_ref())
-        .unwrap();
-    let showing_self = self_id == item.id.as_str();
+    let showing_self = deconstruct_ref.item_ref == *self_ref;
     let required_items = deconstruct
         .required_items
         .iter()
         .map(|required_item| match &required_item.item {
             ItemRef::Id(id) => {
-                let item = ambient_data
-                    .get_item(id.as_str())
+                let item_ref = ambient_data
+                    .new_item_ref(id)
                     .expect("Deconstruct Required item");
                 html! {
                     <ItemThumbnail
-                        {item}
+                        {item_ref}
                         link=true
                         amount={required_item.amount}
                         condition_range={required_item.condition.clone()}
@@ -54,15 +52,15 @@ pub fn show_deconstruct(
         .items
         .iter()
         .map(|produced_item| {
-            let item = ambient_data
-                .get_item(produced_item.id.as_str())
+            let item_ref = ambient_data
+                .new_item_ref(produced_item.id.as_str())
                 .expect("Deconstruct Produced item");
             // TODO: The produced items are conditional based on input condition.
-            let is_self = &item.id == self_id;
+            let is_self = item_ref == *self_ref;
 
             html! {
                 <ItemThumbnail
-                    {item}
+                    {item_ref}
                     link={!is_self}
                     amount={produced_item.amount}
                 />
@@ -72,7 +70,7 @@ pub fn show_deconstruct(
     html! {
         <div class="panel-block deconstruct">
             <div class="required-items">
-                <ItemThumbnail {item} link={!showing_self} />
+                <ItemThumbnail item_ref={deconstruct_ref.item_ref} link={!showing_self} />
                 {required_items}
             </div>
             <div class="production-arrow">{"->"}</div>

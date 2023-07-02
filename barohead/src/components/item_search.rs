@@ -16,17 +16,19 @@ impl RenderHtml for SearchResult {
 }
 
 #[derive(Properties, PartialEq)]
-struct ShowSearchResultProps {
+struct Props {
     search_result: SearchResult,
 }
 
 #[function_component(ShowSearchResult)]
-fn show_search_result(ShowSearchResultProps { search_result }: &ShowSearchResultProps) -> Html {
+fn show_search_result(Props { search_result }: &Props) -> Html {
+    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
     let mut peekable = search_result.indices.iter().peekable();
 
     // TODO: this is _really_ slow, you can feel the difference. It should use chunks.
-    let visible_match = search_result
-        .description
+    let item = ambient_data.get_item(search_result.item_ref);
+    let description = ambient_data.translations.get_name(item);
+    let visible_match = description
         .char_indices()
         .map(|(idx, ch)| match peekable.peek() {
             Some(next_idx) if **next_idx == idx => {
@@ -45,7 +47,7 @@ fn show_search_result(ShowSearchResultProps { search_result }: &ShowSearchResult
             {" "}
             <span class="item-id">
                 {"("}
-                {&search_result.item.id}
+                {&item.id}
                 {")"}
             </span>
         </div>
@@ -57,16 +59,23 @@ pub fn item_search() -> Html {
     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
     let navigator = use_navigator().unwrap();
 
-    let navigate_to_item = Callback::from(move |items: Vec<SearchResult>| {
-        let id = &items.first().unwrap().item.id;
-        navigator.push(&Route::Item { id: id.clone() })
-    });
+    let navigate_to_item = {
+        let ambient_data = ambient_data.clone();
+        Callback::from(move |items: Vec<SearchResult>| {
+            let item_ref = &items.first().unwrap().item_ref;
+            let item = ambient_data.get_item(*item_ref);
+            navigator.push(&Route::Item {
+                id: item.id.clone(),
+            })
+        })
+    };
 
-    let resolve_items: ItemResolver<SearchResult> =
+    let resolve_items: ItemResolver<SearchResult> = {
         FnProp::from(move |guess: String| -> ItemResolverResult<SearchResult> {
             let names = ambient_data.search(guess.as_str());
             Box::pin(async { Ok(names) })
-        });
+        })
+    };
 
     html! {
         <Autocomplete<SearchResult>

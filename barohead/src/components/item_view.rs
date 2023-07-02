@@ -2,24 +2,21 @@ use std::rc::Rc;
 
 use yew::prelude::*;
 
-use barohead_data::items::Item;
-
 use crate::{
     components::{ShowDeconstruct, ShowFabricate, ShowProcess},
-    data::{AmbientData, DeconstructRef, FabricateRef},
+    data::{AmbientData, DeconstructRef, FabricateRef, ItemRef},
 };
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub item: Rc<Item>,
+    pub item_ref: ItemRef,
 }
 
 #[function_component(ItemView)]
-pub fn item_view(Props { item }: &Props) -> Html {
+pub fn item_view(Props { item_ref }: &Props) -> Html {
     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
 
-    let id = item.id.as_str();
-
+    let item = ambient_data.get_item(*item_ref);
     let name = ambient_data.translations.get_name(item);
 
     let fabricates = item
@@ -28,11 +25,11 @@ pub fn item_view(Props { item }: &Props) -> Html {
         .enumerate()
         .map(|(idx, _fabricate)| {
             let fabricate_ref = FabricateRef {
-                item_id: id.to_owned(),
+                item_ref: *item_ref,
                 idx,
             };
             html! {
-                <ShowFabricate self_id={id.to_owned()} {fabricate_ref} />
+                <ShowFabricate self_ref={*item_ref} {fabricate_ref} />
             }
         })
         .collect::<Vec<_>>();
@@ -43,36 +40,34 @@ pub fn item_view(Props { item }: &Props) -> Html {
         .enumerate()
         .map(|(idx, _deconstruct)| {
             let deconstruct_ref = DeconstructRef {
-                item_id: id.to_owned(),
+                item_ref: *item_ref,
                 idx,
             };
             html! {
-                <ShowDeconstruct self_id={id.to_owned()} {deconstruct_ref} />
+                <ShowDeconstruct self_ref={*item_ref} {deconstruct_ref} />
             }
         })
         .collect::<Vec<_>>();
 
-    let used_by = ambient_data.get_used_by(id).map(|used_by| {
+    let used_by = ambient_data.get_used_by(*item_ref).map(|used_by| {
         used_by
             .iter()
             .map(|process_ref| {
-                let self_id = item.id.clone();
                 let process_ref = process_ref.clone();
                 html! {
-                    <ShowProcess {self_id} {process_ref} />
+                    <ShowProcess self_ref={*item_ref} {process_ref} />
                 }
             })
             .collect::<Vec<_>>()
     });
 
-    let produced_by = ambient_data.get_produced_by(id).map(|produced_by| {
+    let produced_by = ambient_data.get_produced_by(*item_ref).map(|produced_by| {
         produced_by
             .iter()
             .map(|process_ref| {
-                let self_id = item.id.clone();
                 let process_ref = process_ref.clone();
                 html! {
-                    <ShowProcess {self_id} {process_ref} />
+                    <ShowProcess self_ref={*item_ref} {process_ref} />
                 }
             })
             .collect::<Vec<_>>()
@@ -86,7 +81,7 @@ pub fn item_view(Props { item }: &Props) -> Html {
                 <div class="panel-block">
                     <dl>
                         <dt>{"Id"}</dt>
-                        <dd>{id}</dd>
+                        <dd>{&item.id}</dd>
                     </dl>
                 </div>
             </div>

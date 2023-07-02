@@ -6,37 +6,37 @@ use barohead_data::items::ItemRef;
 
 use crate::{
     components::ItemThumbnail,
+    data,
     data::{AmbientData, FabricateRef},
 };
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub self_id: String,
+    pub self_ref: data::ItemRef,
     pub fabricate_ref: FabricateRef,
 }
 
 #[function_component(ShowFabricate)]
 pub fn show_fabricate(
     Props {
-        self_id,
+        self_ref,
         fabricate_ref,
     }: &Props,
 ) -> Html {
     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
     let fabricate = ambient_data.get_fabricate(fabricate_ref);
-    let item = ambient_data
-        .get_item(fabricate_ref.item_id.as_str())
-        .unwrap();
     let required_items = fabricate
         .required_items
         .iter()
         .map(|required_item| match &required_item.item {
-            ItemRef::Id(id) => {
-                let input_item = ambient_data.get_item(id).expect("Fabricate Required item");
-                let is_self = input_item.id == self_id.as_str();
+            ItemRef::Id(input_item_id) => {
+                let input_item_ref = ambient_data
+                    .new_item_ref(input_item_id)
+                    .expect("Fabricate required item");
+                let is_self = &input_item_ref == self_ref;
                 html! {
                     <ItemThumbnail
-                        item={input_item}
+                        item_ref={input_item_ref}
                         link={!is_self}
                         amount={required_item.amount}
                         condition_range={required_item.condition.clone()}
@@ -60,14 +60,14 @@ pub fn show_fabricate(
         })
         .collect::<Vec<_>>();
 
-    let output_is_self = &item.id == self_id;
+    let output_is_self = fabricate_ref.item_ref == *self_ref;
     html! {
         <div class="panel-block fabricate">
             <div class="required-items">{required_items}</div>
             <div class="production-arrow">{"->"}</div>
             <div class="produced-items">
                 <ItemThumbnail
-                    {item}
+                    item_ref={fabricate_ref.item_ref}
                     link={!output_is_self}
                     amount={fabricate.amount}
                     condition={fabricate.out_condition}
