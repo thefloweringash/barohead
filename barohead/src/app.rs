@@ -125,9 +125,9 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                 .collect::<Vec<_>>();
             html! {
                 <div class="fabricate">
-                    <div class="required_items">{required_items}</div>
+                    <div class="required-items">{required_items}</div>
                     <div class="production-arrow">{"->"}</div>
-                    <div class="produced_items">
+                    <div class="produced-items">
                         <ItemThumbnail {item} amount={fabricate.amount} condition={fabricate.out_condition} />
                     </div>
                 </div>
@@ -178,12 +178,12 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                 .collect::<Vec<_>>();
             html! {
                 <div class="deconstruct">
-                    <div class="required_items">
+                    <div class="required-items">
                         <ItemThumbnail {item} />
                         {required_items}
                     </div>
                     <div class="production-arrow">{"->"}</div>
-                    <div class="produced_items">{produced_items}</div>
+                    <div class="produced-items">{produced_items}</div>
                 </div>
             }
         })

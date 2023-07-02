@@ -8,13 +8,13 @@
   align-items: center;
   margin: 20px 0;
 
-  .required_items {
+  .required-items {
     display: grid;
     grid-template-columns: repeat(3, 135px);
     grid-gap: 12px;
   }
 
-  .produced_items {
+  .produced-items {
     display: grid;
     grid-template-columns: repeat(2, 135px);
     grid-gap: 12px;
