@@ -6,13 +6,13 @@ use barohead_data::items::ItemRef;
 
 use crate::{
     components::ItemThumbnail,
-    data,
-    data::{AmbientData, DeconstructRef},
+    db,
+    db::{DeconstructRef, DB},
 };
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub self_ref: data::ItemRef,
+    pub self_ref: db::ItemRef,
     pub deconstruct_ref: DeconstructRef,
 }
 
@@ -23,17 +23,15 @@ pub fn show_deconstruct(
         deconstruct_ref,
     }: &Props,
 ) -> Html {
-    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
-    let deconstruct = ambient_data.get_deconstruct(deconstruct_ref);
+    let db = use_context::<Rc<DB>>().unwrap();
+    let deconstruct = db.get_deconstruct(deconstruct_ref);
     let showing_self = deconstruct_ref.item_ref == *self_ref;
     let required_items = deconstruct
         .required_items
         .iter()
         .map(|required_item| match &required_item.item {
             ItemRef::Id(id) => {
-                let item_ref = ambient_data
-                    .new_item_ref(id)
-                    .expect("Deconstruct Required item");
+                let item_ref = db.new_item_ref(id).expect("Deconstruct Required item");
                 html! {
                     <ItemThumbnail
                         {item_ref}
@@ -52,7 +50,7 @@ pub fn show_deconstruct(
         .items
         .iter()
         .map(|produced_item| {
-            let item_ref = ambient_data
+            let item_ref = db
                 .new_item_ref(produced_item.id.as_str())
                 .expect("Deconstruct Produced item");
             // TODO: The produced items are conditional based on input condition.

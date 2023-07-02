@@ -5,7 +5,7 @@ use yew_router::prelude::*;
 
 use barohead_data::items::ConditionRange;
 
-use crate::data::{AmbientData, ItemRef};
+use crate::db::{ItemRef, DB};
 use crate::routes::Route;
 
 #[derive(Properties, PartialEq)]
@@ -31,9 +31,9 @@ pub fn item_thumbnail(
         link,
     }: &Props,
 ) -> Html {
-    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
+    let db = use_context::<Rc<DB>>().unwrap();
 
-    let item = ambient_data.get_item(*item_ref);
+    let item = db.get_item(*item_ref);
 
     let body = html! {
         <>
@@ -41,7 +41,7 @@ pub fn item_thumbnail(
               <span class="amount">{amount.unwrap()} {"x"}</span>
             }
             { " " }
-            <span class="name">{ambient_data.translations.get_name(item)}</span>
+            <span class="name">{db.translations.get_name(item)}</span>
             if condition_range.is_some() {
                 <span class="condition-range">{format!("{:#?}", condition_range)}</span>
             }

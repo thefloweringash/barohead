@@ -2,7 +2,7 @@ use std::panic;
 
 mod app;
 mod components;
-mod data;
+mod db;
 mod routes;
 
 fn main() {

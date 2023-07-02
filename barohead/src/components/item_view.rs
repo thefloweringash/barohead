@@ -4,7 +4,7 @@ use yew::prelude::*;
 
 use crate::{
     components::{ShowDeconstruct, ShowFabricate, ShowProcess},
-    data::{AmbientData, DeconstructRef, FabricateRef, ItemRef},
+    db::{DeconstructRef, FabricateRef, ItemRef, DB},
 };
 
 #[derive(Properties, PartialEq)]
@@ -14,10 +14,10 @@ pub struct Props {
 
 #[function_component(ItemView)]
 pub fn item_view(Props { item_ref }: &Props) -> Html {
-    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
+    let db = use_context::<Rc<DB>>().unwrap();
 
-    let item = ambient_data.get_item(*item_ref);
-    let name = ambient_data.translations.get_name(item);
+    let item = db.get_item(*item_ref);
+    let name = db.translations.get_name(item);
 
     let fabricates = item
         .fabricate
@@ -49,7 +49,7 @@ pub fn item_view(Props { item_ref }: &Props) -> Html {
         })
         .collect::<Vec<_>>();
 
-    let used_by = ambient_data.get_used_by(*item_ref).map(|used_by| {
+    let used_by = db.get_used_by(*item_ref).map(|used_by| {
         used_by
             .iter()
             .map(|process_ref| {
@@ -61,7 +61,7 @@ pub fn item_view(Props { item_ref }: &Props) -> Html {
             .collect::<Vec<_>>()
     });
 
-    let produced_by = ambient_data.get_produced_by(*item_ref).map(|produced_by| {
+    let produced_by = db.get_produced_by(*item_ref).map(|produced_by| {
         produced_by
             .iter()
             .map(|process_ref| {

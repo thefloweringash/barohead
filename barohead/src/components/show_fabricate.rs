@@ -6,13 +6,13 @@ use barohead_data::items::ItemRef;
 
 use crate::{
     components::ItemThumbnail,
-    data,
-    data::{AmbientData, FabricateRef},
+    db,
+    db::{FabricateRef, DB},
 };
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
-    pub self_ref: data::ItemRef,
+    pub self_ref: db::ItemRef,
     pub fabricate_ref: FabricateRef,
 }
 
@@ -23,14 +23,14 @@ pub fn show_fabricate(
         fabricate_ref,
     }: &Props,
 ) -> Html {
-    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
-    let fabricate = ambient_data.get_fabricate(fabricate_ref);
+    let db = use_context::<Rc<DB>>().unwrap();
+    let fabricate = db.get_fabricate(fabricate_ref);
     let required_items = fabricate
         .required_items
         .iter()
         .map(|required_item| match &required_item.item {
             ItemRef::Id(input_item_id) => {
-                let input_item_ref = ambient_data
+                let input_item_ref = db
                     .new_item_ref(input_item_id)
                     .expect("Fabricate required item");
                 let is_self = &input_item_ref == self_ref;

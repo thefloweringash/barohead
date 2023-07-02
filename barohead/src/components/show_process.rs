@@ -2,7 +2,7 @@ use yew::prelude::*;
 
 use crate::{
     components::{ShowDeconstruct, ShowFabricate},
-    data::{ItemRef, ProcessRef},
+    db::{ItemRef, ProcessRef},
 };
 
 #[derive(Properties, PartialEq)]

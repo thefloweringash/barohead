@@ -43,7 +43,7 @@ pub enum ProcessRef {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct AmbientData {
+pub struct DB {
     item_ids: StringInterner,
 
     items: BTreeMap<ItemID, Rc<data::Item>>,
@@ -125,7 +125,7 @@ fn build_indexes(
     (used_by_builder.extract(), produced_by_builder.extract())
 }
 
-impl AmbientData {
+impl DB {
     pub fn from(mut itemdb: data::ItemDB) -> Self {
         let mut item_ids = StringInterner::default();
 
