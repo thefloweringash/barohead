@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use barohead_data::items::*;
 
@@ -91,5 +91,133 @@ impl ItemTranslations {
             .get(name_string.as_str())
             .map(|x| x.as_str())
             .unwrap_or(item.id.as_str())
+    }
+}
+
+enum ActiveItemRef {
+    Tag(String),
+    Item(Weak<ActiveItem>),
+}
+
+impl ActiveItemRef {
+    pub fn is_item(&self) -> bool {
+        match self {
+            Self::Item(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_item(&self) -> Rc<ActiveItem> {
+        match self {
+            Self::Item(item) => item.upgrade().unwrap(),
+            _ => panic!("Not an item"),
+        }
+    }
+}
+
+pub struct ActiveRequiredItem {
+    item: ActiveItemRef,
+    pub amount: i32,
+    pub condition: Option<ConditionRange>,
+}
+
+struct ActiveFabricate {
+    pub suitable_fabricators: Vec<Fabricator>,
+    pub time: f32,
+    pub required_items: Vec<ActiveRequiredItem>,
+    pub required_skills: BTreeMap<Skill, i32>,
+    pub requires_recipe: bool,
+    pub out_condition: f32,
+    pub amount: i32,
+    pub recycle: bool,
+    produced_item: Weak<ActiveItem>,
+}
+
+impl ActiveFabricate {
+    pub fn produced_item(&self) -> Rc<ActiveItem> {
+        self.produced_item.upgrade().unwrap()
+    }
+}
+
+struct ActiveDeconstruct {
+    pub deconstruct: Deconstruct,
+    required_items: Vec<Weak<ActiveItem>>,
+}
+
+enum ProcessRef {
+    Fabricate(Rc<ActiveFabricate>),
+    Deconstruct(Rc<ActiveDeconstruct>),
+}
+
+struct ActiveItem {
+    name: String,
+    fabricate: Vec<Rc<ActiveFabricate>>,
+    deconstruct: Vec<Rc<ActiveDeconstruct>>,
+    used_by: Vec<ProcessRef>,
+    produced_by: Vec<ProcessRef>,
+}
+
+struct ActiveDB {
+    active_items: BTreeMap<String, Rc<ActiveItem>>,
+}
+
+impl ActiveDB {
+    pub fn from(mut db: ItemDB, translations: &ItemTranslations) -> Self {
+        let mut active_items = db
+            .items
+            .iter()
+            .map(|item| {
+                let name = translations.get_name(&item).to_owned();
+                let active_item = ActiveItem {
+                    name: name.clone(),
+                    fabricate: vec![],
+                    deconstruct: vec![],
+                    used_by: vec![],
+                    produced_by: vec![],
+                };
+                (name, Rc::new(active_item))
+            })
+            .collect::<BTreeMap<_, _>>();
+
+        // We have an item we can point two in assembling our other models
+        for item in db.items.into_iter() {
+            let active_fabricates = item
+                .fabricate
+                .iter()
+                .map(|fabricate| {
+                    Rc::new(ActiveFabricate {
+                        suitable_fabricators: fabricate.suitable_fabricators.clone(),
+                        time: fabricate.time,
+                        required_items: fabricate
+                            .required_items
+                            .iter()
+                            .map(|x| {
+                                let item_ref = match &x.item {
+                                    ItemRef::Tag(str) => ActiveItemRef::Tag(str.clone()),
+                                    ItemRef::Id(id) => ActiveItemRef::Item(Rc::downgrade(
+                                        active_items.get(id).unwrap(),
+                                    )),
+                                };
+                                ActiveRequiredItem {
+                                    item: item_ref,
+                                    amount: x.amount,
+                                    condition: x.condition.clone(),
+                                }
+                            })
+                            .collect(),
+                        required_skills: fabricate.required_skills.clone(),
+                        requires_recipe: fabricate.requires_recipe,
+                        out_condition: fabricate.out_condition,
+                        amount: fabricate.amount,
+                        recycle: fabricate.recycle,
+                        produced_item: Rc::downgrade(active_items.get(&item.id).unwrap()),
+                    })
+                })
+                .collect::<Vec<_>>();
+            let mut active_item = active_items.get_mut(&item.id).unwrap();
+            active_item.get_mut().fabricate.extend(active_fabricates);
+        }
+
+        ActiveDB { active_items }
     }
 }
