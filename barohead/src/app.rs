@@ -44,7 +44,15 @@ fn show_search_result(ShowSearchResultProps { search_result }: &ShowSearchResult
         .collect::<Vec<_>>();
 
     html! {
-        <div>{visible_match}</div>
+        <div>
+            {visible_match}
+            {" "}
+            <span class="item-id">
+                {"("}
+                {&search_result.item.id}
+                {")"}
+            </span>
+        </div>
     }
 }
 
@@ -67,7 +75,6 @@ pub fn new_item_search() -> Html {
     let resolve_items: ItemResolver<SearchResult> =
         FnProp::from(move |guess: String| -> ItemResolverResult<SearchResult> {
             let names = ambient_data.search(guess.as_str());
-            web_sys::console::log_1(&format!("{:#?}", names).into());
             Box::pin(async { Ok(names) })
         });
 

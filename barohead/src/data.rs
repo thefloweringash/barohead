@@ -19,7 +19,6 @@ pub struct SearchResult {
 #[derive(Debug, PartialEq)]
 pub struct AmbientData {
     items: BTreeMap<String, Rc<Item>>,
-    items_by_description: BTreeMap<String, Rc<Item>>,
 
     pub translations: ItemTranslations,
 }
@@ -38,25 +37,19 @@ impl AmbientData {
             texts: english_texts,
         };
 
-        let items_by_description = rc_items
-            .values()
-            .map(|item| (format!("{}", translations.get_name(item)), item.clone()))
-            .collect();
-
         Self {
             items: rc_items,
             translations,
-            items_by_description,
         }
     }
 
     pub fn search(&self, query: &str) -> Vec<SearchResult> {
         let matcher = SkimMatcherV2::default();
         let mut matching_items: Vec<_> = self
-            .items_by_description
-            .iter()
-            .filter_map(|(description, item)| {
-                let description = description.as_str();
+            .items
+            .values()
+            .filter_map(|item| {
+                let description = self.translations.get_name(item);
                 matcher
                     .fuzzy_indices(description, query)
                     .map(|(score, indices)| SearchResult {
