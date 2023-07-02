@@ -8,7 +8,7 @@ use yew_router::prelude::*;
 
 use barohead_data::items::*;
 
-use crate::data::{AmbientData, SearchResult};
+use crate::data::{AmbientData, DeconstructRef, FabricateRef, ProcessRef, SearchResult};
 use crate::widgets::TextInput;
 
 #[derive(Properties, PartialEq)]
@@ -91,6 +91,163 @@ pub fn new_item_search() -> Html {
 }
 
 #[derive(Properties, PartialEq)]
+struct ShowFabricateProps {
+    self_id: String,
+    fabricate_ref: FabricateRef,
+}
+
+#[function_component(ShowFabricate)]
+fn show_fabricate(
+    ShowFabricateProps {
+        self_id,
+        fabricate_ref,
+    }: &ShowFabricateProps,
+) -> Html {
+    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
+    let fabricate = ambient_data.get_fabricate(fabricate_ref);
+    let item = ambient_data
+        .get_item(fabricate_ref.item_id.as_str())
+        .unwrap();
+    let required_items = fabricate
+        .required_items
+        .iter()
+        .map(|required_item| match &required_item.item {
+            ItemRef::Id(id) => {
+                let input_item = ambient_data.get_item(id).expect("Fabricate Required item");
+                let is_self = input_item.id == self_id.as_str();
+                html! {
+                    <ItemThumbnail
+                    item={input_item}
+                    link={!is_self}
+                    amount={required_item.amount}
+                    condition_range={required_item.condition.clone()}
+                    />
+                }
+            }
+            ItemRef::Tag(tag) => {
+                html! {
+                    <div>
+                    {"(Tag) "}
+                    if required_item.amount != 1 {
+                        <span class="amount">{required_item.amount}</span>
+                    }
+                    <span class="name">{tag}</span>
+                    if required_item.condition.is_some() {
+                        <span class="condition">{format!("{:#?}", required_item.condition)}</span>
+                    }
+                    </div>
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+    html! {
+        <div class="panel-block fabricate">
+            <div class="required-items">{required_items}</div>
+            <div class="production-arrow">{"->"}</div>
+            <div class="produced-items">
+                <ItemThumbnail {item} amount={fabricate.amount} condition={fabricate.out_condition} />
+            </div>
+        </div>
+    }
+}
+
+#[derive(Properties, PartialEq)]
+struct ShowDeconstructProps {
+    self_id: String,
+    deconstruct_ref: DeconstructRef,
+}
+
+#[function_component(ShowDeconstruct)]
+fn show_deconstruct(
+    ShowDeconstructProps {
+        self_id,
+        deconstruct_ref,
+    }: &ShowDeconstructProps,
+) -> Html {
+    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
+    let deconstruct = ambient_data.get_deconstruct(deconstruct_ref);
+    let item = ambient_data
+        .get_item(deconstruct_ref.item_id.as_ref())
+        .unwrap();
+    let showing_self = self_id == item.id.as_str();
+    let required_items = deconstruct
+        .required_items
+        .iter()
+        .map(|required_item| match &required_item.item {
+            ItemRef::Id(id) => {
+                let item = ambient_data
+                    .get_item(id.as_str())
+                    .expect("Deconstruct Required item");
+                html! {
+                    <ItemThumbnail
+                        {item}
+                        link=true
+                        amount={required_item.amount}
+                        condition_range={required_item.condition.clone()}
+                    />
+                }
+            }
+            _ => {
+                panic!("Does this really happen?");
+            }
+        })
+        .collect::<Vec<_>>();
+    let produced_items = deconstruct
+        .items
+        .iter()
+        .map(|produced_item| {
+            let item = ambient_data
+                .get_item(produced_item.id.as_str())
+                .expect("Deconstruct Produced item");
+            // TODO: The produced items are conditional based on input condition.
+            let is_self = &item.id == self_id;
+
+            html! {
+                <ItemThumbnail
+                    {item}
+                    link={!is_self}
+                    amount={produced_item.amount}
+                />
+            }
+        })
+        .collect::<Vec<_>>();
+    html! {
+        <div class="panel-block deconstruct">
+            <div class="required-items">
+                <ItemThumbnail {item} link={!showing_self} />
+                {required_items}
+            </div>
+            <div class="production-arrow">{"->"}</div>
+            <div class="produced-items">{produced_items}</div>
+        </div>
+    }
+}
+
+#[derive(Properties, PartialEq)]
+struct ShowProcessProps {
+    self_id: String,
+    process_ref: ProcessRef,
+}
+
+#[function_component(ShowProcess)]
+fn show_process(
+    ShowProcessProps {
+        self_id,
+        process_ref,
+    }: &ShowProcessProps,
+) -> Html {
+    let self_id = self_id.clone();
+    match process_ref {
+        ProcessRef::Fabricate(fabricate_ref) => {
+            html! { <ShowFabricate {self_id} fabricate_ref={fabricate_ref.clone()} /> }
+        }
+        ProcessRef::Deconstruct(deconstruct_ref) => {
+            html! { <ShowDeconstruct {self_id} deconstruct_ref={deconstruct_ref.clone()} /> }
+        }
+    }
+}
+
+#[derive(Properties, PartialEq)]
 struct ItemProps {
     item: Rc<Item>,
 }
@@ -102,114 +259,65 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
 
     let name = ambient_data.translations.get_name(item);
 
-    let fabricate = item
+    let fabricates = item
         .fabricate
         .iter()
-        .map(|fabricate| {
-            let required_items = fabricate
-                .required_items
-                .iter()
-                .map(|required_item| {
-                    match &required_item.item {
-                        ItemRef::Id(id) => {
-                            let input_item = ambient_data.get_item(id).expect("Fabricate Required item");
-                            let is_self = input_item.id == item.id;
-                            html! {
-                                <ItemThumbnail
-                                    item={input_item}
-                                    link={!is_self}
-                                    amount={required_item.amount}
-                                    condition_range={required_item.condition.clone()}
-                                />
-                            }
-                        }
-                        ItemRef::Tag(tag) => {
-                            html! {
-                                <div>
-                                    {"(Tag) "}
-                                    if required_item.amount != 1 {
-                                      <span class="amount">{required_item.amount}</span>
-                                    }
-                                    <span class="name">{tag}</span>
-                                    if required_item.condition.is_some() {
-                                        <span class="condition">{format!("{:#?}", required_item.condition)}</span>
-                                    }
-                                </div>
-                            }
-                        }
-                    }
-                })
-                .collect::<Vec<_>>();
+        .enumerate()
+        .map(|(idx, _fabricate)| {
+            let fabricate_ref = FabricateRef {
+                item_id: id.to_owned(),
+                idx,
+            };
             html! {
-                <div class="panel-block fabricate">
-                    <div class="required-items">{required_items}</div>
-                    <div class="production-arrow">{"->"}</div>
-                    <div class="produced-items">
-                        <ItemThumbnail {item} amount={fabricate.amount} condition={fabricate.out_condition} />
-                    </div>
-                </div>
+                <ShowFabricate self_id={id.to_owned()} {fabricate_ref} />
             }
         })
         .collect::<Vec<_>>();
 
-    let deconstruct = item
+    let deconstructs = item
         .deconstruct
         .iter()
-        .map(|deconstruct| {
-            let required_items = deconstruct
-                .required_items
-                .iter()
-                .map(|required_item| match &required_item.item {
-                    ItemRef::Id(id) => {
-                        let item = ambient_data
-                            .get_item(id.as_str())
-                            .expect("Deconstruct Required item");
-                        html! {
-                            <ItemThumbnail
-                                {item}
-                                link=true
-                                amount={required_item.amount}
-                                condition_range={required_item.condition.clone()}
-                            />
-                        }
-                    }
-                    _ => {
-                        panic!("Does this really happen?");
-                    }
-                })
-                .collect::<Vec<_>>();
-            let produced_items = deconstruct
-                .items
-                .iter()
-                .map(|produced_item| {
-                    let item = ambient_data
-                        .get_item(produced_item.id.as_str())
-                        .expect("Deconstruct Produced item");
-                    // TODO: The produced items are conditional based on input condition.
-                    html! {
-                        <ItemThumbnail
-                            link=true
-                            {item}
-                            amount={produced_item.amount}
-                        />
-                    }
-                })
-                .collect::<Vec<_>>();
+        .enumerate()
+        .map(|(idx, deconstruct)| {
+            let deconstruct_ref = DeconstructRef {
+                item_id: id.to_owned(),
+                idx,
+            };
             html! {
-                <div class="panel-block deconstruct">
-                    <div class="required-items">
-                        <ItemThumbnail {item} />
-                        {required_items}
-                    </div>
-                    <div class="production-arrow">{"->"}</div>
-                    <div class="produced-items">{produced_items}</div>
-                </div>
+                <ShowDeconstruct self_id={id.to_owned()} {deconstruct_ref} />
             }
         })
         .collect::<Vec<_>>();
+
+    let used_by = ambient_data.get_used_by(id).map(|used_by| {
+        used_by
+            .iter()
+            .map(|process_ref| {
+                let self_id = item.id.clone();
+                let process_ref = process_ref.clone();
+                html! {
+                    <ShowProcess {self_id} {process_ref} />
+                }
+            })
+            .collect::<Vec<_>>()
+    });
+
+    let produced_by = ambient_data.get_produced_by(id).map(|produced_by| {
+        produced_by
+            .iter()
+            .map(|process_ref| {
+                let self_id = item.id.clone();
+                let process_ref = process_ref.clone();
+                html! {
+                    <ShowProcess {self_id} {process_ref} />
+                }
+            })
+            .collect::<Vec<_>>()
+    });
 
     html! {
         <div class="container">
+            <h1>{name}</h1>
             <div class="panel">
                 <div class="panel-heading">{"Details"}</div>
                 <div class="panel-block">
@@ -220,20 +328,24 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                 </div>
             </div>
             <div class="panel">
-                <div class="panel-heading">{format!("Fabricated By ({})", fabricate.len())}</div>
-                {fabricate}
+                <div class="panel-heading">{format!("Fabricated By ({})", fabricates.len())}</div>
+                {fabricates}
             </div>
             <div class="panel">
-                <div class="panel-heading">{format!("Deconstructs Into ({})", deconstruct.len())}</div>
-                {deconstruct}
+                <div class="panel-heading">{format!("Deconstructs Into ({})", deconstructs.len())}</div>
+                {deconstructs}
             </div>
             <div class="panel">
-                <div class="panel-heading">{"Used by"}</div>
-                <div class="panel-block">{"TODO"}</div>
+                <div class="panel-heading">{format!("Used By ({})", used_by.as_ref().map(|ub|ub.len()).unwrap_or(0))}</div>
+                if used_by.is_some() {
+                    {used_by.unwrap()}
+                }
             </div>
             <div class="panel">
-                <div class="panel-heading">{"Produced by"}</div>
-                <div class="panel-block">{"TODO"}</div>
+                <div class="panel-heading">{format!("Produced By ({})", produced_by.as_ref().map(|ub|ub.len()).unwrap_or(0))}</div>
+                if produced_by.is_some() {
+                    {produced_by.unwrap()}
+                }
             </div>
             <div class="panel">
                 <div class="panel-heading">{"Debug"}</div>
