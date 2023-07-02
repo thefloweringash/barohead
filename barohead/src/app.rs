@@ -139,12 +139,19 @@ fn show_fabricate(
             }
         })
         .collect::<Vec<_>>();
+
+    let output_is_self = &item.id == self_id;
     html! {
         <div class="panel-block fabricate">
             <div class="required-items">{required_items}</div>
             <div class="production-arrow">{"->"}</div>
             <div class="produced-items">
-                <ItemThumbnail {item} amount={fabricate.amount} condition={fabricate.out_condition} />
+                <ItemThumbnail
+                    {item}
+                    link={!output_is_self}
+                    amount={fabricate.amount}
+                    condition={fabricate.out_condition}
+                />
             </div>
         </div>
     }
