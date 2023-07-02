@@ -1,6 +1,10 @@
 use std::rc::Rc;
 
 use yew::prelude::*;
+use yew_autocomplete::view::RenderHtml;
+use yew_autocomplete::{view::Bulma, Autocomplete, ItemResolver, ItemResolverResult};
+use yew_commons::FnProp;
+use yew_router::prelude::*;
 
 use barohead_data::items::*;
 
@@ -10,6 +14,14 @@ use crate::widgets::TextInput;
 #[derive(Properties, PartialEq)]
 struct ShowSearchResultProps {
     search_result: SearchResult,
+}
+
+#[derive(Clone, Routable, PartialEq)]
+enum Route {
+    #[at("/")]
+    Home,
+    #[at("/item/:id")]
+    Item { id: String },
 }
 
 #[function_component(ShowSearchResult)]
@@ -23,7 +35,7 @@ fn show_search_result(ShowSearchResultProps { search_result }: &ShowSearchResult
         .map(|(idx, ch)| match peekable.peek() {
             Some(next_idx) if **next_idx == idx => {
                 peekable.next();
-                html! { <span key={idx} class="match">{ch}</span> }
+                html! { <span key={idx} class="has-text-weight-bold">{ch}</span> }
             }
             _ => {
                 html! { <span key={idx}>{ch}</span> }
@@ -32,46 +44,42 @@ fn show_search_result(ShowSearchResultProps { search_result }: &ShowSearchResult
         .collect::<Vec<_>>();
 
     html! {
-        <div>
-            <h2>{visible_match}</h2>
-            <ItemView key={search_result.item.id.as_str()} item={search_result.item.clone()} />
-        </div>
+        <div>{visible_match}</div>
+    }
+}
+
+impl RenderHtml for SearchResult {
+    fn render(&self) -> Html {
+        html! { <ShowSearchResult search_result={self.clone()} /> }
     }
 }
 
 #[function_component(ItemSearch)]
-fn item_search() -> Html {
+pub fn new_item_search() -> Html {
     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
-    let search_input = use_state(|| "".to_owned());
+    let navigator = use_navigator().unwrap();
 
-    let on_change = {
-        let search_input = search_input.clone();
-        Callback::from(move |e: String| {
-            web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(e.as_str()));
-            search_input.set(e)
-        })
-    };
+    let navigate_to_item = Callback::from(move |items: Vec<SearchResult>| {
+        let id = &(*items.first().unwrap().item).id;
+        navigator.push(&Route::Item { id: id.clone() })
+    });
 
-    let results = {
-        ambient_data
-            .search(&*search_input)
-            .into_iter()
-            .map(|search_result| {
-                let key = search_result.item.id.to_owned();
-                html! {
-                    <ShowSearchResult {key} {search_result} />
-                }
-            })
-            .collect::<Vec<_>>()
-    };
+    let resolve_items: ItemResolver<SearchResult> =
+        FnProp::from(move |guess: String| -> ItemResolverResult<SearchResult> {
+            let names = ambient_data.search(guess.as_str());
+            web_sys::console::log_1(&format!("{:#?}", names).into());
+            Box::pin(async { Ok(names) })
+        });
+
     html! {
-        <>
-            <TextInput value={(*search_input).clone()} {on_change}></TextInput>
-            <div class="search-results">
-                {results}
-            </div>
-        </>
-
+        <Autocomplete<SearchResult>
+            {resolve_items}
+            onchange={navigate_to_item}
+            auto=true
+        >
+            <Bulma<SearchResult>
+        />
+        </Autocomplete<SearchResult>>
     }
 }
 
@@ -97,10 +105,12 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                 .map(|required_item| {
                     match &required_item.item {
                         ItemRef::Id(id) => {
-                            let item = ambient_data.get_item(id).expect("Fabricate Required item");
+                            let input_item = ambient_data.get_item(id).expect("Fabricate Required item");
+                            let is_self = input_item.id == item.id;
                             html! {
                                 <ItemThumbnail
-                                    {item}
+                                    item={input_item}
+                                    link={!is_self}
                                     amount={required_item.amount}
                                     condition_range={required_item.condition.clone()}
                                 />
@@ -124,7 +134,7 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                 })
                 .collect::<Vec<_>>();
             html! {
-                <div class="fabricate">
+                <div class="panel-block fabricate">
                     <div class="required-items">{required_items}</div>
                     <div class="production-arrow">{"->"}</div>
                     <div class="produced-items">
@@ -150,6 +160,7 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                         html! {
                             <ItemThumbnail
                                 {item}
+                                link=true
                                 amount={required_item.amount}
                                 condition_range={required_item.condition.clone()}
                             />
@@ -170,6 +181,7 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                     // TODO: The produced items are conditional based on input condition.
                     html! {
                         <ItemThumbnail
+                            link=true
                             {item}
                             amount={produced_item.amount}
                         />
@@ -177,7 +189,7 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
                 })
                 .collect::<Vec<_>>();
             html! {
-                <div class="deconstruct">
+                <div class="panel-block deconstruct">
                     <div class="required-items">
                         <ItemThumbnail {item} />
                         {required_items}
@@ -190,28 +202,42 @@ fn item_view(ItemProps { item }: &ItemProps) -> Html {
         .collect::<Vec<_>>();
 
     html! {
-        <div>
-            <h3>{"Details"}</h3>
-            <dl>
-                <dt>{"Id"}</dt>
-                <dd>{id}</dd>
-            </dl>
-            <h3>{format!("Fabricated By ({})", fabricate.len())}</h3>
-            {fabricate}
-            <h3>{format!("Deconstructs Into ({})", deconstruct.len())}</h3>
-            {deconstruct}
-            <h3>{"Used by"}</h3>
-            <div>{"TODO"}</div>
-            <h3>{"Produced by"}</h3>
-            <div>{"TODO"}</div>
-            <h3>{"Debug"}</h3>
-            <details>
-               <summary>{"Raw data"}</summary>
+        <div class="container">
+            <div class="panel">
+                <div class="panel-heading">{"Details"}</div>
+                <div class="panel-block">
+                    <dl>
+                        <dt>{"Id"}</dt>
+                        <dd>{id}</dd>
+                    </dl>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-heading">{format!("Fabricated By ({})", fabricate.len())}</div>
+                {fabricate}
+            </div>
+            <div class="panel">
+                <div class="panel-heading">{format!("Deconstructs Into ({})", deconstruct.len())}</div>
+                {deconstruct}
+            </div>
+            <div class="panel">
+                <div class="panel-heading">{"Used by"}</div>
+                <div class="panel-block">{"TODO"}</div>
+            </div>
+            <div class="panel">
+                <div class="panel-heading">{"Produced by"}</div>
+                <div class="panel-block">{"TODO"}</div>
+            </div>
+            <div class="panel">
+                <div class="panel-heading">{"Debug"}</div>
+                <details class="panel-block">
+                   <summary>{"Raw data"}</summary>
 
-                <pre>
-                    {format!("{:#?}", item)}
-                </pre>
-            </details>
+                    <pre>
+                        {format!("{:#?}", item)}
+                    </pre>
+                </details>
+            </div>
         </div>
     }
 }
@@ -225,6 +251,8 @@ struct ItemThumbnailProps {
     condition_range: Option<ConditionRange>,
     #[prop_or_default]
     condition: Option<f32>,
+    #[prop_or_default]
+    link: bool,
 }
 #[function_component(ItemThumbnail)]
 fn item_thumbnail(
@@ -233,6 +261,7 @@ fn item_thumbnail(
         amount,
         condition,
         condition_range,
+        link,
     }: &ItemThumbnailProps,
 ) -> Html {
     let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
@@ -241,8 +270,8 @@ fn item_thumbnail(
 
     // let name = ambient_data.translations.get_name(item);
 
-    html! {
-        <div class="item-thumbnail">
+    let body = html! {
+        <>
             if amount.is_some() && amount.unwrap() != 1 {
               <span class="amount">{amount.unwrap()} {"x"}</span>
             }
@@ -254,7 +283,19 @@ fn item_thumbnail(
             if condition.is_some() && condition.unwrap() != 1.0 {
                 <span class="conditione">{format!("{:#?}", condition)}</span>
             }
-        </div>
+        </>
+    };
+
+    html! {
+        if *link {
+            <Link<Route> to={Route::Item{ id: item.id.clone() }} classes="item-thumbnail">
+                {body}
+            </Link<Route>>
+        } else {
+            <div class="item-thumbnail">
+                {body}
+            </div>
+        }
     }
 }
 
@@ -274,6 +315,63 @@ fn item_list(ItemListProps { items }: &ItemListProps) -> Html {
         .collect()
 }
 
+#[derive(Properties, PartialEq)]
+struct ItemPageProps {
+    id: String,
+}
+
+#[function_component(ItemPage)]
+fn item_page(ItemPageProps { id }: &ItemPageProps) -> Html {
+    let ambient_data = use_context::<Rc<AmbientData>>().unwrap();
+    let item = ambient_data.get_item(id).unwrap();
+    html! {
+        <>
+            <Nav />
+            <ItemView {item} />
+        </>
+    }
+}
+
+fn switch(route: Route) -> Html {
+    match route {
+        Route::Home => html! { <Home /> },
+        Route::Item { id } => html! {
+           <ItemPage {id} />
+        },
+    }
+}
+
+#[function_component(Nav)]
+fn nav() -> Html {
+    html! {
+        <nav class="navbar" role="navigation" aria-label="main navigation">
+            <div class="navbar-brand">
+                <Link<Route> to={Route::Home} classes="navbar-item">
+                    {"BAROHEAD"}
+                </Link<Route>>
+                <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                  <span aria-hidden="true"></span>
+                </a>
+            </div>
+            <div class="navbar-menu">
+                <div class="navbar-start">
+                    <div class="navbar-item">
+                        <ItemSearch />
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+    }
+}
+
+#[function_component(Home)]
+fn home() -> Html {
+    html! { <Nav /> }
+}
+
 #[function_component(App)]
 pub fn app() -> Html {
     // It might be easier to make this a lazy_static, but then we don't have the
@@ -289,8 +387,9 @@ pub fn app() -> Html {
     html! {
         <>
             <ContextProvider<Rc<AmbientData>> context={ambient_data}>
-                <h1>{ "Barotruma Item Database" }</h1>
-                <ItemSearch />
+                <BrowserRouter>
+                    <Switch<Route> render={switch} />
+                </BrowserRouter>
             </ContextProvider<Rc<AmbientData>>>
         </>
     }

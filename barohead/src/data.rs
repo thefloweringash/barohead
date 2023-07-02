@@ -8,7 +8,7 @@ use fuzzy_matcher::FuzzyMatcher;
 
 // Statically compute a bunch of indexes and so on that we will use a bunch.
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct SearchResult {
     pub description: String,
     pub score: i64,
