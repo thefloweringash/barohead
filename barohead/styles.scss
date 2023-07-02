@@ -8,6 +8,12 @@
   align-items: center;
   margin: 20px 0;
 
+  .production-arrow {
+    padding: 0 15px;
+  }
+}
+
+.fabricate {
   .required-items {
     display: grid;
     grid-template-columns: repeat(3, 135px);
@@ -19,9 +25,19 @@
     grid-template-columns: repeat(2, 135px);
     grid-gap: 12px;
   }
+}
 
-  .production-arrow {
-    padding: 0 15px;
+.deconstruct {
+  .required-items {
+    display: grid;
+    grid-template-columns: repeat(2, 135px);
+    grid-gap: 12px;
+  }
+
+  .produced-items {
+    display: grid;
+    grid-template-columns: repeat(3, 135px);
+    grid-gap: 12px;
   }
 }
 
