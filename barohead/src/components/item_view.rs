@@ -1,5 +1,6 @@
 use std::rc::Rc;
 
+use url_escape::encode_query;
 use yew::prelude::*;
 
 use crate::{
@@ -73,9 +74,20 @@ pub fn item_view(Props { item_ref }: &Props) -> Html {
             .collect::<Vec<_>>()
     });
 
+    let wiki_search_text = format!("Search for {name} on the Official Barotrauma Wiki");
+    let wiki_search_url = format!(
+        "https://barotraumagame.com/baro-wiki/index.php?search={}",
+        encode_query(name)
+    );
+
     html! {
         <div class="container">
-            <h1>{name}</h1>
+            <div class="content">
+                <h1>{name}</h1>
+                <p>
+                    <a href={wiki_search_url}>{wiki_search_text}</a>
+                </p>
+            </div>
             <div class="panel">
                 <div class="panel-heading">{"Details"}</div>
                 <div class="panel-block">
