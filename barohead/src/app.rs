@@ -116,10 +116,10 @@ fn show_fabricate(
                 let is_self = input_item.id == self_id.as_str();
                 html! {
                     <ItemThumbnail
-                    item={input_item}
-                    link={!is_self}
-                    amount={required_item.amount}
-                    condition_range={required_item.condition.clone()}
+                        item={input_item}
+                        link={!is_self}
+                        amount={required_item.amount}
+                        condition_range={required_item.condition.clone()}
                     />
                 }
             }
