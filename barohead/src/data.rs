@@ -46,12 +46,12 @@ pub struct AmbientData {
 type ProcessIndex = BTreeMap<String, Rc<Vec<ProcessRef>>>;
 
 pub struct IndexBuilder {
-    map: BTreeMap<String, Box<Vec<ProcessRef>>>,
+    map: BTreeMap<String, Vec<ProcessRef>>,
 }
 
 impl IndexBuilder {
     pub fn new() -> Self {
-        let map = BTreeMap::<String, Box<Vec<ProcessRef>>>::new();
+        let map = BTreeMap::<String, Vec<ProcessRef>>::new();
         Self { map }
     }
 
@@ -61,15 +61,14 @@ impl IndexBuilder {
                 refs.push(process_ref.clone())
             }
         } else {
-            self.map
-                .insert(id.to_owned(), Box::new(vec![process_ref.clone()]));
+            self.map.insert(id.to_owned(), vec![process_ref.clone()]);
         }
     }
 
     pub fn extract(self) -> ProcessIndex {
         self.map
             .into_iter()
-            .map(|(id, refs_box)| (id, Rc::new(*refs_box)))
+            .map(|(id, refs)| (id, Rc::new(refs)))
             .collect()
     }
 }
