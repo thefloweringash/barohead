@@ -141,7 +141,7 @@ impl DB {
             .remove(&data::Language::English)
             .unwrap()
             .into_iter()
-            .map(|(key, translation)| (key, Rc::from(translation.clone())))
+            .map(|(key, translation)| (key, Rc::from(translation)))
             .collect();
 
         let item_translations = items
@@ -150,7 +150,7 @@ impl DB {
                 let name_key = item.name_text_key();
                 let name = english_texts
                     .get(&name_key)
-                    .map(|x| x.clone())
+                    .cloned()
                     .unwrap_or_else(|| Rc::new(item.id.clone()));
                 (*item_id, name)
             })
@@ -228,7 +228,7 @@ pub struct ItemTranslations {
 }
 
 impl ItemTranslations {
-    pub fn get_name<'a>(&'a self, item_ref: impl Borrow<ItemRef>) -> &'a str {
+    pub fn get_name(&self, item_ref: impl Borrow<ItemRef>) -> &str {
         self.item_translations
             .get(&item_ref.borrow().item_id)
             .unwrap()
