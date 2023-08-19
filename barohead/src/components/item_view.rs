@@ -4,7 +4,7 @@ use url_escape::encode_query;
 use yew::prelude::*;
 
 use crate::{
-    components::{ShowDeconstruct, ShowFabricate, ShowProcess},
+    components::{PricingView, ShowDeconstruct, ShowFabricate, ShowProcess},
     db::{DeconstructRef, FabricateRef, ItemRef, DB},
 };
 
@@ -18,7 +18,7 @@ pub fn item_view(Props { item_ref }: &Props) -> Html {
     let db = use_context::<Rc<DB>>().unwrap();
 
     let item = db.get_item(*item_ref);
-    let name = db.translations.get_name(item_ref);
+    let name = db.item_translations.get_name(item_ref);
 
     let fabricates = item
         .fabricate
@@ -95,6 +95,9 @@ pub fn item_view(Props { item_ref }: &Props) -> Html {
                         <dt>{"Id"}</dt>
                         <dd>{&item.id}</dd>
                     </dl>
+                </div>
+                <div class="panel-block">
+                    <PricingView item_ref={*item_ref} />
                 </div>
             </div>
             <div class="panel">

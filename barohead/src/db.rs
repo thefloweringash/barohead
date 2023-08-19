@@ -2,7 +2,7 @@ use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use barohead_data::items as data;
+use barohead_data::items::{self as data, StoreIdentifier};
 
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
@@ -51,8 +51,22 @@ pub struct DB {
     items_used_by: ProcessIndex,
     items_produced_by: ProcessIndex,
 
-    pub translations: ItemTranslations,
+    pub item_translations: ItemTranslations,
+    pub store_translations: Translations<StoreIdentifier>,
 }
+
+pub static INTERESTING_MERCHANTS: [StoreIdentifier; 10] = [
+    StoreIdentifier::MerchantOutpost,
+    StoreIdentifier::MerchantCity,
+    StoreIdentifier::MerchantResearch,
+    StoreIdentifier::MerchantMilitary,
+    StoreIdentifier::MerchantMine,
+    StoreIdentifier::MerchantMedical,
+    StoreIdentifier::MerchantEngineering,
+    StoreIdentifier::MerchantArmory,
+    StoreIdentifier::MerchantClown,
+    StoreIdentifier::MerchantHusk,
+];
 
 type ProcessIndex = BTreeMap<ItemID, Rc<Vec<ProcessRef>>>;
 
@@ -156,16 +170,34 @@ impl DB {
             })
             .collect::<BTreeMap<_, _>>();
 
-        let translations = ItemTranslations { item_translations };
-
         let (items_used_by, items_produced_by) = build_indexes(&item_ids, &items);
+
+        let store_translations = INTERESTING_MERCHANTS
+            .iter()
+            .map(|store_identifier| {
+                let name_key = store_identifier.name_text_key();
+                let name = english_texts
+                    .get(&name_key)
+                    .cloned()
+                    .unwrap_or_else(|| Rc::new(format!("{:#?}", store_identifier)));
+                (*store_identifier, name)
+            })
+            .collect::<BTreeMap<_, _>>();
 
         Self {
             item_ids,
             items,
-            translations,
+            item_translations: ItemTranslations {
+                translations: Translations {
+                    translations: item_translations,
+                },
+            },
             items_used_by,
             items_produced_by,
+
+            store_translations: Translations {
+                translations: store_translations,
+            },
         }
     }
 
@@ -175,7 +207,9 @@ impl DB {
             .items
             .keys()
             .filter_map(|item_id| {
-                let description = &self.translations.get_name_rc(ItemRef { item_id: *item_id });
+                let description = &self
+                    .item_translations
+                    .get_name_rc(ItemRef { item_id: *item_id });
                 matcher
                     .fuzzy_indices(description, query)
                     .map(|(score, indices)| SearchResult {
@@ -223,21 +257,31 @@ impl DB {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct Translations<T> {
+    translations: BTreeMap<T, Rc<String>>,
+}
+
+impl<T: Ord> Translations<T> {
+    pub fn get_name(&self, key: &T) -> &str {
+        self.translations.get(key).unwrap()
+    }
+
+    pub fn get_name_rc(&self, key: &T) -> Rc<String> {
+        self.translations.get(key).unwrap().clone()
+    }
+}
+
+#[derive(Debug, PartialEq)]
 pub struct ItemTranslations {
-    item_translations: BTreeMap<ItemID, Rc<String>>,
+    translations: Translations<ItemID>,
 }
 
 impl ItemTranslations {
     pub fn get_name(&self, item_ref: impl Borrow<ItemRef>) -> &str {
-        self.item_translations
-            .get(&item_ref.borrow().item_id)
-            .unwrap()
+        self.translations.get_name(&item_ref.borrow().item_id)
     }
 
     pub fn get_name_rc(&self, item_ref: impl Borrow<ItemRef>) -> Rc<String> {
-        self.item_translations
-            .get(&item_ref.borrow().item_id)
-            .unwrap()
-            .clone()
+        self.translations.get_name_rc(&item_ref.borrow().item_id)
     }
 }

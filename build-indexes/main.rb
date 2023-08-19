@@ -83,7 +83,23 @@ ItemRef =  Data.define(:type, :value) do
   def tag? = type === :tag
 end
 
-Item = Struct.new('Item', :id, :nameidentifier, :fabricate, :deconstruct) do
+Price = Data.define(:baseprice, :sold, :modifiers) do
+  include CanJson
+
+  def as_json(*)
+    { 'baseprice' => baseprice, 'sold' => sold, 'modifiers' => modifiers }
+  end
+end
+
+PriceModifier = Data.define(:store_identifier, :multiplier, :sold) do
+  include CanJson
+
+  def as_json(*)
+    { 'store_identifier' => store_identifier, 'multiplier' => multiplier, 'sold' => sold }
+  end
+end
+
+Item = Struct.new('Item', :id, :nameidentifier, :fabricate, :deconstruct, :price) do
   def initialize(...)
     super
     self.fabricate ||= []
@@ -96,6 +112,7 @@ Item = Struct.new('Item', :id, :nameidentifier, :fabricate, :deconstruct) do
       'nameidentifier' => nameidentifier,
       'fabricate' => fabricate,
       'deconstruct' => deconstruct,
+      'price' => price,
     }
   end
 
@@ -195,6 +212,26 @@ class ItemDB
             recycle:,
           )
         end
+
+        item_node.xpath('Price').each do |price_node|
+          baseprice = parse_integer(price_node, 'baseprice', nil)
+          next if baseprice.nil? # see 'geneticmaterialhusk'
+          sold = parse_boolean(price_node, 'sold', true)
+
+          item.price = Price.new(
+            baseprice:, sold:, modifiers: [],
+          )
+
+          price_node.xpath('Price').each do |price_modifier_node|
+            store_identifier = require_string(price_modifier_node, 'storeidentifier')
+            sold = parse_boolean(price_modifier_node, 'sold', nil)
+            multiplier = parse_float(price_modifier_node, 'multiplier', nil)
+
+            item.price.modifiers << PriceModifier.new(
+              store_identifier:, multiplier:, sold:,
+            )
+          end
+        end
       end
     end
   end
@@ -208,7 +245,8 @@ class ItemDB
         texts = {} # it's just kv
         texts_node.children.each do |child_node|
           next unless child_node.element?
-          next unless child_node.name.start_with?("entityname")
+          next unless (child_node.name.start_with?("entityname") ||
+            child_node.name.start_with?("storename"))
 
           texts[child_node.name] = child_node.children.to_s
         end
