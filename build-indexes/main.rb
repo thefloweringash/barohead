@@ -91,11 +91,11 @@ Price = Data.define(:baseprice, :sold, :modifiers) do
   end
 end
 
-PriceModifier = Data.define(:store_identifier, :multiplier, :sold) do
+PriceModifier = Data.define(:multiplier, :sold) do
   include CanJson
 
   def as_json(*)
-    { 'store_identifier' => store_identifier, 'multiplier' => multiplier, 'sold' => sold }
+    { 'multiplier' => multiplier, 'sold' => sold }
   end
 end
 
@@ -219,7 +219,7 @@ class ItemDB
           sold = parse_boolean(price_node, 'sold', true)
 
           item.price = Price.new(
-            baseprice:, sold:, modifiers: [],
+            baseprice:, sold:, modifiers: {},
           )
 
           price_node.xpath('Price').each do |price_modifier_node|
@@ -227,9 +227,8 @@ class ItemDB
             sold = parse_boolean(price_modifier_node, 'sold', nil)
             multiplier = parse_float(price_modifier_node, 'multiplier', nil)
 
-            item.price.modifiers << PriceModifier.new(
-              store_identifier:, multiplier:, sold:,
-            )
+            item.price.modifiers[store_identifier] =
+              PriceModifier.new(multiplier:, sold:,)
           end
         end
       end

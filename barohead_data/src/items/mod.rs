@@ -134,7 +134,6 @@ impl StoreIdentifier {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct PriceModifier {
-    pub store_identifier: StoreIdentifier,
     pub multiplier: Option<f32>,
     pub sold: Option<bool>,
 }
@@ -143,5 +142,5 @@ pub struct PriceModifier {
 pub struct Price {
     pub baseprice: i32,
     pub sold: bool,
-    pub modifiers: Vec<PriceModifier>,
+    pub modifiers: BTreeMap<StoreIdentifier, PriceModifier>,
 }

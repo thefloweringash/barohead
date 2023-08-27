@@ -17,10 +17,7 @@ struct StoreSummary {
 
 impl StoreSummary {
     fn for_store(price: &Price, store: StoreIdentifier) -> Self {
-        let matching_modifier = price
-            .modifiers
-            .iter()
-            .find(|modifier| modifier.store_identifier == store);
+        let matching_modifier = price.modifiers.get(&store);
 
         let sold = if Self::is_specialist_merchant(store) {
             matching_modifier
