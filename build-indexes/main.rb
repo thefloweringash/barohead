@@ -223,6 +223,9 @@ class ItemDB
           )
 
           price_node.xpath('Price').each do |price_modifier_node|
+            # idcardfakesootman has two price modifiers with no store
+            next unless price_modifier_node.has_attribute?('storeidentifier')
+
             store_identifier = require_string(price_modifier_node, 'storeidentifier')
             sold = parse_boolean(price_modifier_node, 'sold', nil)
             multiplier = parse_float(price_modifier_node, 'multiplier', nil)
@@ -326,7 +329,7 @@ class ItemDB
       raise "Unknown item reference"
     end
 
-    raise "Unexpected tag" if ref.tag? && !allow_tag
+    raise "Unexpected tag in ref: '#{ref}'" if ref.tag? && !allow_tag
 
     ref
   end
@@ -354,6 +357,8 @@ class ItemDB
       case child_node.name
       when 'Item'
         ref = parse_item_ref(child_node, allow_tag: items_are_requirements)
+        next if ref.nil? # see nucleardepthchargecheap, probably variantof related
+
         amount = parse_integer(child_node, 'amount', 1)
 
         if items_are_requirements then
@@ -363,7 +368,7 @@ class ItemDB
           items << ProducedItem.new(id: ref.id, amount:, mincondition:)
         end
       when 'RequiredItem'
-        ref = parse_item_ref(child_node, allow_tag: false)
+        ref = parse_item_ref(child_node, allow_tag: true)
         next if ref.nil? # see slipsuit recipe, maybe "variantof" handling
 
         amount = parse_integer(child_node, 'amount', 1)
